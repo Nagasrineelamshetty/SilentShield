@@ -2,7 +2,19 @@ import serial
 import pandas as pd
 import time
 import joblib
+import firebase_admin
+from firebase_admin import credentials, db
+# =============================
+# FIREBASE INITIALIZATION
+# =============================
+if not firebase_admin._apps:
+    cred = credentials.Certificate("silent-shield-firebase-adminsdk-fbsvc-ea2243f6c7.json")
 
+    firebase_admin.initialize_app(cred, {
+        "databaseURL": "https://silent-shield-default-rtdb.asia-southeast1.firebasedatabase.app"
+    })
+
+ref = db.reference("machine_data")
 # =============================
 # USER SETTINGS
 # =============================
@@ -53,6 +65,18 @@ while True:
         try:
             prediction = model.predict(df)[0]
             score = model.decision_function(df)[0]
+            # Send data to Firebase
+            data = {
+                "ax": ax,
+                "ay": ay,
+                "az": az,
+                "sound": sound,
+                "prediction": int(prediction),
+                "score": float(score),
+                "timestamp": time.time()
+            }
+
+            ref.push(data)
         except Exception as e:
             print("Model error:", e, flush=True)
             continue
